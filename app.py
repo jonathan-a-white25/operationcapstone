@@ -29,7 +29,6 @@ if os.path.exists(css_path):
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 _model_file = os.path.join(BASE_DIR, "sentiment_model.py")
-
 if not os.path.exists(_model_file):
     st.error(f"Cannot find sentiment_model.py\nLooked in: {_model_file}\nFiles found: {os.listdir(BASE_DIR)}")
     st.stop()
@@ -56,12 +55,12 @@ PLOTLY_LAYOUT = dict(
 
 def pill(label, variant="neutral"):
     icons = {"positive": "▲", "negative": "▼", "neutral": "●"}
-    return (f'<span class="metric-pill pill-{variant}">{icons.get(variant,"●")} {label}</span>')
+    return f'<span class="metric-pill pill-{variant}">{icons.get(variant,"●")} {label}</span>'
 
 def conf_bar(confidence, label):
     pct = int(confidence * 100)
     cls = "conf-bar-positive" if label == "positive" else "conf-bar-negative"
-    return (f'<div class="conf-bar-wrap"><div class="conf-bar-fill {cls}" style="width:{pct}%"></div></div>')
+    return f'<div class="conf-bar-wrap"><div class="conf-bar-fill {cls}" style="width:{pct}%"></div></div>'
 
 def result_card(item):
     label  = item["label"]
@@ -76,6 +75,9 @@ def result_card(item):
         f'{conf_bar(conf, label)}</div>'
     )
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SIDEBAR
+# ─────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown('<div class="app-title" style="font-size:1.4rem">🔮 Sentiment<span>OS</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="app-subtitle">v1.0 · Amazon Fashion NLP</div>', unsafe_allow_html=True)
@@ -101,6 +103,9 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
+# ─────────────────────────────────────────────────────────────────────────────
+# PAGE HEADER
+# ─────────────────────────────────────────────────────────────────────────────
 st.markdown(
     '<div class="app-header">'
     '<div class="app-title">Sentiment<span>OS</span></div>'
@@ -109,6 +114,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# ═════════════════════════════════════════════════════════════════════════════
+# MODE 1 – PREDICT
+# ═════════════════════════════════════════════════════════════════════════════
 if mode == "📝  Predict":
     st.markdown('<div class="section-header">Single or Bulk Text Prediction</div>', unsafe_allow_html=True)
 
@@ -162,11 +170,24 @@ if mode == "📝  Predict":
                 res = predict([text], pipeline, threshold)[0]
                 st.markdown(result_card(res), unsafe_allow_html=True)
 
+# ═════════════════════════════════════════════════════════════════════════════
+# MODE 2 – EDA & BATCH
+# ═════════════════════════════════════════════════════════════════════════════
 else:
     tab_eda, tab_train, tab_batch = st.tabs(["📈  Exploratory Analysis", "🏋️  Train Model", "🗂️  Batch Predict"])
 
+    # ── Helper: load CSV ───────────────────────────────────────────────────
     @st.cache_data(show_spinner=False)
-    def load_uploaded(reviews_bytes, meta_bytes, nrows):
+    def load_csv(file_bytes):
+        df = pd.read_csv(io.BytesIO(file_bytes))
+        # clean_text already exists in the dataset — only compute if missing
+        if "clean_text" not in df.columns:
+            df["clean_text"] = df["text"].apply(clean_text)
+        return df
+
+    # ── Helper: load JSONL pair ────────────────────────────────────────────
+    @st.cache_data(show_spinner=False)
+    def load_jsonl(reviews_bytes, meta_bytes, nrows):
         reviews  = pd.read_json(io.BytesIO(reviews_bytes), lines=True, nrows=nrows)
         metadata = pd.read_json(io.BytesIO(meta_bytes),   lines=True, nrows=nrows)
         df = reviews.merge(metadata, how="left", on="parent_asin", suffixes=("_review", "_meta"))
@@ -175,22 +196,42 @@ else:
         df["clean_text"] = df["text"].apply(clean_text)
         return df
 
+    # ── EDA TAB ────────────────────────────────────────────────────────────
     with tab_eda:
-        st.markdown('<div class="section-header">Upload your JSONL files</div>', unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        with c1:
-            reviews_file = st.file_uploader("Reviews JSONL", type=["jsonl","json"], key="rev")
-        with c2:
-            meta_file = st.file_uploader("Metadata JSONL", type=["jsonl","json"], key="meta")
+        st.markdown('<div class="section-header">Upload your dataset</div>', unsafe_allow_html=True)
 
-        nrows = st.slider("Max rows to load", 10_000, 500_000, 100_000, step=10_000)
+        upload_type = st.radio(
+            "File type",
+            ["📄  CSV (cleaned dataset)", "📦  JSONL (raw Amazon files)"],
+            horizontal=True,
+        )
 
-        if reviews_file and meta_file:
-            with st.spinner("Loading & merging datasets…"):
-                df = load_uploaded(reviews_file.read(), meta_file.read(), nrows)
-            st.session_state["df"] = df
-            st.success(f"✓ Loaded {len(df):,} rows · {df.shape[1]} columns")
+        df = None
 
+        if upload_type == "📄  CSV (cleaned dataset)":
+            csv_file = st.file_uploader("Upload your cleaned CSV", type=["csv"])
+            if csv_file:
+                with st.spinner("Loading CSV…"):
+                    df = load_csv(csv_file.read())
+                st.session_state["df"] = df
+                st.success(f"✓ Loaded {len(df):,} rows · {df.shape[1]} columns")
+
+        else:
+            c1, c2 = st.columns(2)
+            with c1:
+                reviews_file = st.file_uploader("Reviews JSONL", type=["jsonl","json"], key="rev")
+            with c2:
+                meta_file = st.file_uploader("Metadata JSONL", type=["jsonl","json"], key="meta")
+            nrows = st.slider("Max rows to load", 10_000, 500_000, 100_000, step=10_000)
+
+            if reviews_file and meta_file:
+                with st.spinner("Loading & merging datasets…"):
+                    df = load_jsonl(reviews_file.read(), meta_file.read(), nrows)
+                st.session_state["df"] = df
+                st.success(f"✓ Loaded {len(df):,} rows · {df.shape[1]} columns")
+
+        if df is not None:
+            # ── TextBlob polarity if not already present ───────────────────
             if "sentiment" not in df.columns:
                 sample_n  = min(20_000, len(df))
                 sample_df = df.sample(sample_n, random_state=42).copy()
@@ -198,14 +239,17 @@ else:
                     from textblob import TextBlob
                     with st.spinner("Computing TextBlob polarity (sample)…"):
                         sample_df["polarity"]  = sample_df["text"].apply(lambda x: TextBlob(str(x)).sentiment.polarity)
-                        sample_df["sentiment"] = sample_df["polarity"].apply(lambda p: "positive" if p > 0 else ("negative" if p < 0 else "neutral"))
+                        sample_df["sentiment"] = sample_df["polarity"].apply(
+                            lambda p: "positive" if p > 0 else ("negative" if p < 0 else "neutral"))
                     df = df.merge(sample_df[["polarity","sentiment"]], left_index=True, right_index=True, how="left")
                 except ImportError:
                     df["polarity"]  = np.nan
                     df["sentiment"] = "unknown"
-            st.session_state["df"] = df
+                st.session_state["df"] = df
 
             st.markdown('<div class="glow-line"></div>', unsafe_allow_html=True)
+
+            # ── KPI row ────────────────────────────────────────────────────
             st.markdown('<div class="section-header">Dataset Overview</div>', unsafe_allow_html=True)
             k1, k2, k3, k4 = st.columns(4)
             k1.metric("Total Reviews",   f"{len(df):,}")
@@ -214,6 +258,7 @@ else:
             k4.metric("Avg Tokens",      f"{df['clean_text'].apply(lambda x: len(str(x).split())).mean():.0f}")
             st.markdown("---")
 
+            # ── Charts ─────────────────────────────────────────────────────
             pc1, pc2 = st.columns(2)
             with pc1:
                 if "rating" in df.columns:
@@ -230,16 +275,18 @@ else:
                 if "sentiment" in df.columns and df["sentiment"].notna().any():
                     sc   = df["sentiment"].value_counts()
                     cmap = {"positive":"#00F5C4","negative":"#FF4D6D","neutral":"#FFD166","unknown":"#64748B"}
-                    fig  = go.Figure(go.Pie(labels=sc.index, values=sc.values, hole=0.55,
-                                           marker_colors=[cmap.get(s,"#64748B") for s in sc.index]))
-                    fig.update_layout(title="Sentiment Distribution (TextBlob sample)", **PLOTLY_LAYOUT)
+                    fig  = go.Figure(go.Pie(
+                        labels=sc.index, values=sc.values, hole=0.55,
+                        marker_colors=[cmap.get(s,"#64748B") for s in sc.index],
+                    ))
+                    fig.update_layout(title="Sentiment Distribution", **PLOTLY_LAYOUT)
                     st.plotly_chart(fig, use_container_width=True)
 
             if "polarity" in df.columns and df["polarity"].notna().any():
                 avg_pol = df.groupby("rating")["polarity"].mean().reset_index()
                 fig = px.bar(avg_pol, x="rating", y="polarity", color="polarity",
                              color_continuous_scale=["#FF4D6D","#FFD166","#00F5C4"],
-                             title="Avg TextBlob Polarity by Rating")
+                             title="Avg Polarity by Rating")
                 fig.update_layout(**PLOTLY_LAYOUT)
                 st.plotly_chart(fig, use_container_width=True)
 
@@ -264,16 +311,20 @@ else:
 
             with st.expander("🔍 Raw Data Preview"):
                 st.dataframe(df.head(100), use_container_width=True)
-        else:
-            st.info("Upload both `Amazon_Fashion.jsonl` and `meta_Amazon_Fashion.jsonl` to begin.")
 
+        else:
+            st.info("Upload your dataset above to begin.")
+
+    # ── TRAIN TAB ──────────────────────────────────────────────────────────
     with tab_train:
         st.markdown('<div class="section-header">Train the TF-IDF + LR Pipeline</div>', unsafe_allow_html=True)
+
         if "df" not in st.session_state:
             st.warning("Load your data in the **Exploratory Analysis** tab first.")
         else:
             df = st.session_state["df"]
             st.info(f"Using {len(df):,} rows.\n\nRatings 1-2 → **negative**, 4-5 → **positive** (rating 3 excluded).")
+
             if st.button("🚀  START TRAINING", use_container_width=True):
                 progress = st.progress(0, text="Preparing data…")
                 time.sleep(0.3)
@@ -285,6 +336,7 @@ else:
                     st.success(f"✓ Model trained! Optimal threshold: **{threshold_:.2f}**")
                     pipeline, threshold = pipeline_, threshold_
                     model_loaded = True
+
                     cm_fig = go.Figure(go.Heatmap(
                         z=cm, x=["Pred: Neg","Pred: Pos"], y=["True: Neg","True: Pos"],
                         colorscale=[[0,"#0A0E1A"],[1,"#00F5C4"]],
@@ -292,14 +344,18 @@ else:
                     ))
                     cm_fig.update_layout(title="Confusion Matrix (test set)", **PLOTLY_LAYOUT)
                     st.plotly_chart(cm_fig, use_container_width=True)
+
                     with st.expander("📋 Full Classification Report"):
                         st.code(report, language=None)
+
                 except Exception as e:
                     st.error(f"Training failed: {e}")
                     progress.empty()
 
+    # ── BATCH PREDICT TAB ──────────────────────────────────────────────────
     with tab_batch:
         st.markdown('<div class="section-header">Batch Predict from CSV/JSONL</div>', unsafe_allow_html=True)
+
         if not model_loaded:
             st.error("Train a model first (EDA tab → Train tab).")
         else:
@@ -308,19 +364,24 @@ else:
                 batch_df = pd.read_csv(batch_file) if batch_file.name.endswith(".csv") else pd.read_json(batch_file, lines=True)
                 st.write(f"**Shape:** {batch_df.shape}")
                 st.dataframe(batch_df.head(5), use_container_width=True)
+
                 text_col = st.selectbox("Which column contains the review text?", batch_df.columns.tolist())
+
                 if st.button("⚡  RUN BATCH PREDICTION", use_container_width=True):
                     with st.spinner(f"Predicting {len(batch_df):,} rows…"):
                         texts   = batch_df[text_col].fillna("").astype(str).tolist()
                         results = predict(texts, pipeline, threshold)
+
                     batch_df["sentiment_label"] = [r["label"]      for r in results]
                     batch_df["confidence"]       = [r["confidence"] for r in results]
                     batch_df["raw_prob_pos"]     = [r["raw_prob"]   for r in results]
+
                     counts = batch_df["sentiment_label"].value_counts()
                     c1, c2, c3 = st.columns(3)
-                    c1.metric("Total", len(batch_df))
+                    c1.metric("Total",    len(batch_df))
                     c2.metric("Positive", counts.get("positive", 0))
                     c3.metric("Negative", counts.get("negative", 0))
+
                     fig = px.histogram(batch_df, x="raw_prob_pos", nbins=50,
                                        title="Distribution of Positive Probability",
                                        color_discrete_sequence=["#00F5C4"])
@@ -328,8 +389,10 @@ else:
                                   annotation_text=f"threshold={threshold:.2f}")
                     fig.update_layout(**PLOTLY_LAYOUT)
                     st.plotly_chart(fig, use_container_width=True)
+
                     csv_out = batch_df.to_csv(index=False).encode("utf-8")
                     st.download_button("⬇️  Download Results CSV", csv_out,
                                        file_name="sentiment_results.csv", mime="text/csv", use_container_width=True)
+
                     with st.expander("🔍 Preview Results"):
                         st.dataframe(batch_df.head(50), use_container_width=True)
