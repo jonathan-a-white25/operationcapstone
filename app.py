@@ -34,14 +34,17 @@ if os.path.exists(css_path):
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # ── Import model utilities ─────────────────────────────────────────────────
-import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from model.sentiment_model import (
-    train_and_save,
-    load_model,
-    predict,
-    clean_text,
-)
+import importlib.util, os
+
+_model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model", "sentiment_model.py")
+_spec = importlib.util.spec_from_file_location("sentiment_model", _model_path)
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)
+
+train_and_save = _mod.train_and_save
+load_model     = _mod.load_model
+predict        = _mod.predict
+clean_text     = _mod.clean_text
 
 # ── Plotly dark template ───────────────────────────────────────────────────
 PLOTLY_LAYOUT = dict(
