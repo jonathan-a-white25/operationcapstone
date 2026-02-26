@@ -1,0 +1,316 @@
+/* ── Reset & Base ─────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap');
+
+:root {
+  --bg:           #0A0E1A;
+  --surface:      #111827;
+  --surface2:     #1a2235;
+  --border:       #1f2d45;
+  --accent:       #00F5C4;
+  --accent-dim:   rgba(0, 245, 196, 0.12);
+  --accent-glow:  rgba(0, 245, 196, 0.35);
+  --red:          #FF4D6D;
+  --red-dim:      rgba(255, 77, 109, 0.12);
+  --yellow:       #FFD166;
+  --text:         #E2E8F0;
+  --text-muted:   #64748B;
+  --radius:       10px;
+  --radius-lg:    16px;
+}
+
+/* ── App Chrome ───────────────────────────────────────────────────────── */
+.stApp {
+  background: var(--bg) !important;
+  font-family: 'Space Mono', monospace !important;
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+  background: var(--surface) !important;
+  border-right: 1px solid var(--border) !important;
+}
+
+[data-testid="stSidebar"] * {
+  font-family: 'Space Mono', monospace !important;
+}
+
+/* ── Header / Title area ──────────────────────────────────────────────── */
+.app-header {
+  padding: 2rem 0 1.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+}
+
+.app-title {
+  font-family: 'Syne', sans-serif !important;
+  font-weight: 800;
+  font-size: 2.4rem;
+  letter-spacing: -0.02em;
+  color: var(--text) !important;
+  line-height: 1.1;
+}
+
+.app-title span {
+  color: var(--accent);
+}
+
+.app-subtitle {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-top: 0.4rem;
+}
+
+/* ── Cards ────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  transition: border-color 0.2s;
+}
+
+.card:hover {
+  border-color: rgba(0,245,196,0.3);
+}
+
+.card-positive {
+  border-left: 3px solid var(--accent) !important;
+  background: linear-gradient(135deg, var(--surface) 0%, rgba(0,245,196,0.04) 100%);
+}
+
+.card-negative {
+  border-left: 3px solid var(--red) !important;
+  background: linear-gradient(135deg, var(--surface) 0%, rgba(255,77,109,0.04) 100%);
+}
+
+/* ── Metric pills ─────────────────────────────────────────────────────── */
+.metric-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 99px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.pill-positive {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid rgba(0,245,196,0.25);
+}
+
+.pill-negative {
+  background: var(--red-dim);
+  color: var(--red);
+  border: 1px solid rgba(255,77,109,0.25);
+}
+
+.pill-neutral {
+  background: rgba(100,116,139,0.15);
+  color: var(--text-muted);
+  border: 1px solid rgba(100,116,139,0.25);
+}
+
+/* ── Confidence bar ───────────────────────────────────────────────────── */
+.conf-bar-wrap {
+  background: var(--surface2);
+  border-radius: 99px;
+  height: 6px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.conf-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.6s cubic-bezier(.16,1,.3,1);
+}
+
+.conf-bar-positive { background: linear-gradient(90deg, #00b894, #00F5C4); }
+.conf-bar-negative { background: linear-gradient(90deg, #c0392b, #FF4D6D); }
+
+/* ── Stat boxes ───────────────────────────────────────────────────────── */
+.stat-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.2rem;
+  text-align: center;
+}
+
+.stat-number {
+  font-family: 'Syne', sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.stat-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 0.3rem;
+}
+
+/* ── Streamlit component overrides ───────────────────────────────────── */
+
+/* Buttons */
+.stButton > button {
+  background: var(--accent) !important;
+  color: #0A0E1A !important;
+  border: none !important;
+  border-radius: var(--radius) !important;
+  font-family: 'Space Mono', monospace !important;
+  font-weight: 700 !important;
+  font-size: 0.8rem !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  padding: 0.6rem 1.4rem !important;
+  transition: all 0.2s !important;
+  box-shadow: 0 0 20px var(--accent-glow) !important;
+}
+
+.stButton > button:hover {
+  background: #00ddb0 !important;
+  box-shadow: 0 0 30px var(--accent-glow) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Text area */
+.stTextArea textarea {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  color: var(--text) !important;
+  font-family: 'Space Mono', monospace !important;
+  font-size: 0.85rem !important;
+}
+
+.stTextArea textarea:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px var(--accent-dim) !important;
+}
+
+/* File uploader */
+[data-testid="stFileUploader"] {
+  background: var(--surface) !important;
+  border: 1px dashed var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+/* Selectbox */
+.stSelectbox > div > div {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+  font-family: 'Space Mono', monospace !important;
+}
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {
+  background: var(--surface) !important;
+  border-radius: var(--radius) !important;
+  padding: 4px !important;
+  gap: 4px !important;
+  border: 1px solid var(--border) !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+  background: transparent !important;
+  color: var(--text-muted) !important;
+  font-family: 'Space Mono', monospace !important;
+  font-size: 0.75rem !important;
+  letter-spacing: 0.05em !important;
+  border-radius: 6px !important;
+}
+
+.stTabs [aria-selected="true"] {
+  background: var(--accent-dim) !important;
+  color: var(--accent) !important;
+}
+
+/* Progress / spinner */
+.stProgress > div > div > div {
+  background: var(--accent) !important;
+}
+
+/* Metrics */
+[data-testid="stMetric"] {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  padding: 1rem !important;
+}
+
+[data-testid="stMetricValue"] {
+  font-family: 'Syne', sans-serif !important;
+  color: var(--accent) !important;
+}
+
+/* Expander */
+.streamlit-expanderHeader {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  font-family: 'Space Mono', monospace !important;
+  font-size: 0.8rem !important;
+}
+
+/* Dataframe */
+.stDataFrame {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+}
+
+/* Divider */
+hr {
+  border-color: var(--border) !important;
+  margin: 1.5rem 0 !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ── Terminal blink cursor ────────────────────────────────────────────── */
+.blink {
+  animation: blink 1.2s step-end infinite;
+  color: var(--accent);
+}
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* ── Section headers ──────────────────────────────────────────────────── */
+.section-header {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+/* ── Glow line accent ─────────────────────────────────────────────────── */
+.glow-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  margin: 2rem 0;
+  opacity: 0.5;
+}
+
+/* Hide Streamlit branding */
+#MainMenu, footer, header { visibility: hidden; }
