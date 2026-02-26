@@ -32,8 +32,10 @@ css_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "s
 if os.path.exists(css_path):
     with open(css_path) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-        
+
 # ── Import model utilities ─────────────────────────────────────────────────
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from model.sentiment_model import (
     train_and_save,
     load_model,
