@@ -19,7 +19,7 @@ CONTRACTION_MAP = {
     "they're": "they are", "we're": "we are", "that's": "that is",
 }
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "trained_model.pkl")
+MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trained_model.pkl")
 
 
 # ── Text cleaning (mirrors your notebook) ──────────────────────────────────
