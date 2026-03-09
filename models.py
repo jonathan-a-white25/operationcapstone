@@ -182,6 +182,13 @@ def evaluate_distilbert(df, hf_pipe, batch_size=64):
         test_size=0.2, random_state=42, stratify=d["y"].to_numpy(dtype=int)
     )
 
+    # Cap at 1,000 rows for speed on free tier CPU
+    if len(X_test) > 1000:
+        idx = np.random.default_rng(42).choice(len(X_test), 1000, replace=False)
+        X_test = X_test[idx]
+        y_test = y_test[idx]
+
+
     # Batch inference
     results, probas = [], []
     for i in range(0, len(X_test), batch_size):
