@@ -79,6 +79,30 @@ def result_card(item, model_key, model_name):
         f'{conf_bar(conf, label)}</div>'
     )
 
+def reeval_at_threshold(stored_metrics, threshold):
+    """Re-compute metrics from stored probabilities at a new threshold."""
+    from sklearn.metrics import (
+        accuracy_score, f1_score, precision_score,
+        recall_score, confusion_matrix, classification_report
+    )
+    y_true  = np.array(stored_metrics["y_test"])
+    probas  = np.array(stored_metrics["proba"])
+    y_pred  = (probas >= threshold).astype(int)
+    return {
+        "accuracy":         round(accuracy_score(y_true, y_pred), 4),
+        "f1_macro":         round(f1_score(y_true, y_pred, average="macro",  zero_division=0), 4),
+        "f1_pos":           round(f1_score(y_true, y_pred, pos_label=1,      zero_division=0), 4),
+        "f1_neg":           round(f1_score(y_true, y_pred, pos_label=0,      zero_division=0), 4),
+        "precision":        round(precision_score(y_true, y_pred, average="macro", zero_division=0), 4),
+        "recall":           round(recall_score(y_true, y_pred, average="macro",    zero_division=0), 4),
+        "confusion_matrix": confusion_matrix(y_true, y_pred).tolist(),
+        "report":           classification_report(y_true, y_pred, digits=4, zero_division=0),
+        "threshold":        threshold,
+        "proba":            stored_metrics["proba"],
+        "y_test":           stored_metrics["y_test"],
+        "y_pred":           y_pred.tolist(),
+    }
+
 @st.cache_data(show_spinner=False)
 def load_csv(file_bytes):
     df = pd.read_csv(io.BytesIO(file_bytes))
@@ -131,13 +155,32 @@ with st.sidebar:
         st.info("Upload a dataset to begin.")
 
     st.markdown("---")
-    st.markdown('<div class="section-header">LR Threshold</div>', unsafe_allow_html=True)
-    lr_threshold = st.slider("", 0.10, 0.90,
-                             float(st.session_state.get("lr_t", 0.5)),
-                             step=0.05, key="lr_threshold_slider")
-    st.caption(f"Current: {lr_threshold:.2f}")
+    st.markdown('<div class="section-header">Decision Threshold</div>', unsafe_allow_html=True)
+    global_threshold = st.slider(
+        "All models", 0.10, 0.90,
+        float(st.session_state.get("global_threshold", 0.50)),
+        step=0.05, key="global_threshold_slider",
+        help="Drag to re-evaluate all 3 models at this threshold. No retraining needed."
+    )
+    st.session_state["global_threshold"] = global_threshold
+
+    # Show per-model optimal thresholds as reference if models have been run
+    _res = st.session_state.get("model_results", {})
+    if _res:
+        st.markdown('<div style="font-size:0.65rem;color:#64748b;font-family:Space Mono,monospace;margin-top:0.5rem">Trained optima:</div>', unsafe_allow_html=True)
+        _colors = {"Logistic Regression": "#00F5C4", "LinearSVC": "#FFD166", "DistilBERT": "#7C6AF7"}
+        for _name, _m in _res.items():
+            _c = _colors.get(_name, "#E2E8F0")
+            st.markdown(
+                f'<div style="font-size:0.62rem;font-family:Space Mono,monospace;color:{_c}">'
+                f'▸ {_name[:3+len(_name.split()[0])]}: t={_m["threshold"]:.2f}</div>',
+                unsafe_allow_html=True
+            )
     st.markdown("---")
     st.markdown('<div style="font-size:0.62rem;color:#1e293b;font-family:Space Mono,monospace">Model 1: TF-IDF + LR<br>Model 2: TF-IDF + LinearSVC<br>Model 3: DistilBERT</div>', unsafe_allow_html=True)
+
+    # Keep lr_threshold in sync for the Predict page
+    lr_threshold = global_threshold
 
 # ── Header ─────────────────────────────────────────────────────────────────
 st.markdown(
@@ -337,8 +380,19 @@ elif page == "🤖  Model Compare":
     if not results:
         st.stop()
 
+    # Re-evaluate all models at the global threshold
+    global_t = st.session_state.get("global_threshold", 0.50)
+    results = {name: reeval_at_threshold(m, global_t) for name, m in results.items()}
+
     model_colors = [ACCENT, YELLOW, PURPLE]
     st.markdown('<div class="glow-line"></div>', unsafe_allow_html=True)
+
+    st.markdown(
+        f'<div style="font-family:Space Mono,monospace;font-size:0.72rem;color:#64748b;margin-bottom:1rem">'
+        f'Evaluating all models at threshold <span style="color:#00F5C4;font-weight:700">t = {global_t:.2f}</span> '
+        f'— adjust the <b>Decision Threshold</b> slider in the sidebar to explore.</div>',
+        unsafe_allow_html=True
+    )
 
     # Metric cards
     st.markdown('<div class="section-header">Performance Metrics</div>', unsafe_allow_html=True)
@@ -426,8 +480,16 @@ elif page == "📝  Predict":
     lr_pipe  = st.session_state.get("lr_pipe")
     svc_pipe = st.session_state.get("svc_pipe")
     hf_pipe  = st.session_state.get("hf_pipe")
-    lr_t     = st.session_state.get("lr_t", lr_threshold)
-    svc_t    = st.session_state.get("svc_t", 0.5)
+    global_t = st.session_state.get("global_threshold", 0.50)
+    lr_t     = global_t
+    svc_t    = global_t
+
+    st.markdown(
+        f'<div style="font-family:Space Mono,monospace;font-size:0.72rem;color:#64748b;margin-bottom:1rem">'
+        f'Using threshold <span style="color:#00F5C4;font-weight:700">t = {global_t:.2f}</span> for all models '
+        f'— adjust in the sidebar.</div>',
+        unsafe_allow_html=True
+    )
 
     if not all([lr_pipe, svc_pipe, hf_pipe]):
         st.warning("⚠️  Go to **🤖 Model Compare** and click **Run All 3 Models** first.")
